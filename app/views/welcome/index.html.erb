@@ -1,0 +1,358 @@
+<h1>Using Ruby on Rails: Ubuntu on Virtualbox</h1>
+<p>This is a guide to setting up and using Ruby on Rails on a virtual machine, running Ubuntu Linux on a Windows 8 laptop. </p>
+<p>The scope covers installation of the virtual machine emulator through building and deploying a newly built web application on the internet. This is achieved as far as possible using well-used current opensource applications, and the document references the respective information sources rather than repeating the content.</p>
+<p>I have aimed to record the issues encountered and how resolved.</p>
+<h2>Set up the virtual machine</h2>
+<p>The starting point is the host machine. In my case this is running Windows 8 Profesional 64bit operating system.</p>
+<h3>Install Virtualbox</h3>
+<p>Download and install <a href="https://www.virtualbox.org/wiki/Downloads">virtualbox</a>. I am using version 4.2.18.</p>
+<h3>Create Ubuntu virtual machine</h3>
+<p>Download <a href="http://www.ubuntu.com/download/desktop">Ubuntu iso file</a> onto the host machine</p>
+<p>From virtualbox main screen select New.
+Use green ranges of parameters.
+Create virtual hard drive at least 10Gb, type default VDI, variable size. Under &quot;System&quot; 
+I suggest setting &quot;Shared Clipboard&quot; to &quot;Bidirectional, and &quot;Drag'n'Drop&quot; to &quot;Host to Guest&quot; </p>
+<p>For the installation option select &quot;erase disk and install Ubuntu&quot;</p>
+<p>Once this starts up, at the prompt &quot;Select start-up disk&quot;
+Set the start to use the iso file downloaded for ubuntu.</p>
+<p>Ubuntu will start up and display a welcome page with two options. Select &quot;Install Ubuntu&quot;. Have a username and password ready stored in a password safe such as <a href="http://keepass.info/">KeePass</a> on the host. </p>
+<p>If you get the error message &quot;&quot;name already exists on network&quot; and you know that is untrue, don't worry; its a bug. Carry on entering the other fields and it will switch to green.</p>
+<p>There are a set of steps recommended on the <a href="http://askubuntu.com/questions/207813/why-does-an-ubuntu-12-10-guest-in-virtualbox-run-very-very-slowly">askubuntu forum</a> to speed up running on virtualbox. I ran these.</p>
+<h3>Shared directory Ubuntu-Windows</h3>
+<p>Install the guest additions from virtualbox &quot;Devices&quot; menu option. </p>
+<p>This action should trigger an autorun to install the guest additions features. If not, navigate to <code>/media/&lt;username&gt;/&lt;guestaddtions folder/</code>
+and run the linux guest additions with</p>
+<pre><code>$ sudo sh VBoxLinuxAdditions.run
+</code></pre>
+
+<p>Now set up the shared directory. From the Virtualbox menu select Devices/Shared folders... . Add a shared folder, I suggest using the c:/Users/Public directory, and call it Share, and set to permanent and automatic mount on the options. Reboot and the folder should be found in /media.</p>
+<p>To get access permissions, add your username to the vboxsf group, and also set up a logical name for the directory</p>
+<pre><code>£ usermod -aG vboxsf &lt;youruser&gt;
+$ ln -s /media/&lt;sf_Ubuntu&gt; /home/m/Desktop/vbox_shared
+</code></pre>
+
+<p>I'm having some trouble with this installation, as the contents of the shared folder are not readable!</p>
+<h3>Synchronise Firefox</h3>
+<p>It is useful to synchronise the virtual machine firefox with the host version: bookmarks and cached passwords are shared.</p>
+<h3>Configure git</h3>
+<p>Git is the configuration management application. You also need a Github account. <a href="https://github.com/join">Set one up</a> if required; it is free if you leave your repository public.</p>
+<p>Set up the local git installation</p>
+<pre><code>$ git config --global color.ui true
+$ git config --global user.name &quot;&lt;your name&gt;&quot;
+$ git config --global user.email &quot;&lt;your email address&gt;&quot;
+</code></pre>
+
+<p>Generate an ssh public key. You will be prompted for a passphrase: you can enter a passphrase that you will give each time you communicate with Github, or enter return twice to dodge needing to enter the passphrase.</p>
+<pre><code>$ ssh-keygen -t rsa -C &quot;&lt;your email address&gt;&quot;
+</code></pre>
+
+<p>Put a copy of the ssh_pub key (copy text from from /.ssh/rsa.pub) into github (Account Settings/SSH Keys).</p>
+<p>Test the key with</p>
+<pre><code>$ ssh -T git@github.com
+</code></pre>
+
+<p>When prompted &quot;Are you sure you want to continue connecting, enter &quot;yes&quot;. Expect</p>
+<pre><code>Hi &lt;username&gt;! You've successfully authenticated, but GitHub does not provi)
+</code></pre>
+
+<h3>Install Ruby and Rails</h3>
+<h4>Ruby</h4>
+<p>rbenv is an environment management facility for ruby, used to handle use of different versions of the ruby libraries. rvm is another facility used for this purpose, but I have used rbenv as it claims to be simpler and more focused on a single task.</p>
+<p>You are going to run many commands which require root privilege; you can save some password prompts and the need to use the sudo prefix by switching to root user with</p>
+<pre><code>$ sudo su -
+</code></pre>
+
+<p>Following instructions from <a href="http://gorails.com/setup/ubuntu/13.10" title="link to gorails">gorails</a></p>
+<p>Install some pre-requisites:</p>
+<pre><code>$ sudo apt-get update
+$ sudo apt-get install git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev
+</code></pre>
+
+<p>First dependencies for javascript</p>
+<pre><code>$ sudo add-apt-repository ppa:chris-lea/node.js 
+$ sudo apt-get update
+$ sudo apt-get install nodejs
+</code></pre>
+
+<p>Install rbenv, then ruby using rbenv</p>
+<pre><code>$ cd
+$ git clone git://github.com/sstephenson/rbenv.git .rbenv
+$ echo 'export PATH=&quot;$HOME/.rbenv/bin:$PATH&quot;' &gt;&gt; ~/.bashrc
+$ echo 'eval &quot;$(rbenv init -)&quot;' &gt;&gt; ~/.bashrc
+$ exec $SHELL
+
+$ git clone git://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build
+$ echo 'export PATH=&quot;$HOME/.rbenv/plugins/ruby-build/bin:$PATH&quot;' &gt;&gt; ~/.bashrc
+$ exec $SHELL
+
+$ rbenv install 2.0.0-p353
+$ rbenv global 2.0.0-p353
+</code></pre>
+
+<p>Set gems to not install documentation locally for each package; this speeds up gem installations</p>
+<pre><code>$ echo &quot;gem: --no-ri --no-rdoc&quot; &gt; ~/.gemrc
+</code></pre>
+
+<p>Check the Ruby installation:</p>
+<pre><code>$ ruby -v
+</code></pre>
+
+<p>Then set up Rails</p>
+<pre><code>$ gem install rails
+$ gem update --system
+</code></pre>
+
+<p>Check the Rails installation:</p>
+<h3>Aptana installation</h3>
+<p>First, install java development kit</p>
+<pre><code>$ sudo add-apt-repository ppa:webupd8team/java
+$ sudo apt-get update
+$ sudo apt-get install oracle-java7-installer
+</code></pre>
+
+<p>Browse to the Aptana site and download the Aptana Studio 3 package. </p>
+<p>In the folder view, go to downloads Double-Click on Archive and Extract into /tmp, then copy to /opt and set up a symbolic name.</p>
+<pre><code>$ sudo su
+$ mv /tmp/Aptana_Studio_3 /opt/aptana
+$ ln -s /opt/aptana/AptanaStudio3 /usr/local/bin/aptanas3
+</code></pre>
+
+<p>Sort out the .desktop file (see Atpana menu troubleshooting)</p>
+<p>I suggest not using the default workspace name, which is long and puts spaces in the path name.
+Instead I suggest using. However, it looks as though the default name is coded into the config files see <a href="http://danielsmedegaardbuus.dk/2010-08-31/be-gone-stupid-aptana-studio-3-folders-in-my-home-directory/">this blog</a></p>
+<p>Or set up a symbolic link to the workspace directory</p>
+<pre><code>$ ln -s &quot;/home/&lt;username&gt;/Documents/Aptana Studio 3 Workspace&quot; ws
+</code></pre>
+
+<p>This might be better set in /etc</p>
+<h3>Postgresql setup</h3>
+<p>Install postgres from apt-get</p>
+<pre><code>$ sudo apt-get install postgresql
+$ sudo apt-get install pgadmin3
+</code></pre>
+
+<p>The following is needed after starting the machine.
+	$ sudo /etc/init.d/postgresql start</p>
+<p>Set the password of the postgres account</p>
+<pre><code>$ sudo -u postgres psql postgres
+</code></pre>
+
+<p>At the prompt set the password
+	\password postgres
+Then Ctl^D to exit.</p>
+<p>Alternative. PG uses &quot;ident sameuser&quot; for any connections from the same maching. So create db acct with same name</p>
+<pre><code>$ sudo -u postgres createuser --superuser $USER
+$ sudo -u postgres psql
+</code></pre>
+
+<h4>Postgresql dba admin</h4>
+<p>You can Use <code>pgadmin3</code> to look at the pg the databases, although you should use rails to create and manage them as it will set up the plumbing in Rails. </p>
+<p>On the first use, you will need to add a connection to the server: go to File / Add Server and in the Host field enter localhost, and give a suitable name such as &quot;PostgreSQL server on localhost&quot;.</p>
+<h3>Set up Heroku</h3>
+<p>Register on Heroku,
+Run the installation as described on the <a href="https://devcenter.heroku.com/articles/getting-started-with-rails4#local-workstation-setup">Getting started with Rails</a> guide.</p>
+<h2>Starting a project</h2>
+<h3>Start postgresql database</h3>
+<pre><code>$ /etc/init.d/postresql &lt;start|stop|status&gt;
+</code></pre>
+
+<h4>Create Rails project</h4>
+<p>When the project is created, specify postgresql as the database, which is required for Heroku. Then create welcome page. Start from ~/</p>
+<pre><code>$ rails new myapp --database=postgresql
+$ cd myapp
+</code></pre>
+
+<h4>Import project into Aptana</h4>
+<p>Start Aptana. 'File/Import../General/Existing Folder as New Project'. Then browse to select the folder created for the Rails project.</p>
+<h4>Add Heroku integration</h4>
+<p>Add lines to Gemfile</p>
+<pre><code>gem 'rails_12factor', group: :production
+ruby &quot;2.0.0&quot;
+</code></pre>
+
+<p>Then run</p>
+<pre><code>$ bundle install
+</code></pre>
+
+<h4>Set the database</h4>
+<p>Remove all (three) instances of <code>username:&lt;app name&gt;</code> from 	<code>config/database.yml</code></p>
+<p>If did not specify <code>--database=postgresql</code> when creating app, then need to add <code>pg</code> gem to Gemfile and change <code>config/database.yml</code>  to use <code>postgresql</code> adapter.</p>
+<p>create the database:</p>
+<pre><code>$ bundle exec db:create:all
+</code></pre>
+
+<h3>Check the app</h3>
+<p>Now start the server, from the application folder:</p>
+<pre><code>$ rails server
+</code></pre>
+
+<p>In your browser visit http://localhost:3000</p>
+<p>You should see your &quot;Welcome Abord&quot; text. This shows that the database configuration is working. Later you can add some actual content.</p>
+<h3>create git repository</h3>
+<p>From the workspace application directory create repository, commit, and check status.</p>
+<pre><code>$ git init
+$ git add .
+$ git commit -m &quot;Initialise repository. Base Rails app&quot;
+$ git status
+</code></pre>
+
+<p>The .gitignore file by default is set to exclude logfiles, /tmp and /.bundle.</p>
+<h4>Set html welcome page</h4>
+<p>To generate a welcome page:</p>
+<pre><code>$ rails generate controller welcome
+</code></pre>
+
+<p>Create <code>app/views/welcome/index.html.erb</code> and put your html there. You can include <code>The time is now: &lt;%= Time.now %&gt;</code> to show currency of the page load. </p>
+<p>If you have css to use for the whole site, put that in <code>app/assets/stylesheets/application.css</code>, or <code>.../welcome.css.scss/</code> for just that page.</p>
+<p>Now set rails to route to this action. Edit <code>config/routes.rb</code>, line 2</p>
+<pre><code>root 'welcome#index'
+</code></pre>
+
+<p>Now start the server, from the application folder:</p>
+<pre><code>$ rails server
+</code></pre>
+
+<p>In your browser visit http://localhost:3000</p>
+<p>You should see your welcome text, with the current time if you included that line.</p>
+<h3>Commit</h3>
+<pre><code>$ git status
+$ git add (get the files to be added)
+$ git commit -m &quot;Add welcome page&quot;
+</code></pre>
+
+<h3>Push to github</h3>
+<p>Log into github account and create new repository.
+The commands then needed on the local end are generated and displayed</p>
+<p>Or for ssh use the form below. If you use  https://github/mikej100/railsapp_20131120b.git you will be prompted for username/password.</p>
+<pre><code>$ github remote add origin git@github/mikej100/railsapp_20131120b.git
+</code></pre>
+
+<h3>Deploy to Heroku</h3>
+<pre><code>$ heroku create
+$ git config -e
+
+$ git push heroku master
+--------&gt; many lines of information
+...
+http://
+
+$ heroku run rake db:migrate
+$ heroku ps:scale web=1
+</code></pre>
+
+<h1>Troubleshooting guides</h1>
+<h2>Troubleshoot virtual machine</h2>
+<h4>Out of disk space</h4>
+<p>Check disk space available:</p>
+<pre><code>$ df -h
+</code></pre>
+
+<p>Increase the size of the drive. These instructions are mostly taken from <a href="http://derekmolloy.ie/resize-a-virtualbox-disk/">Derek Molloy</a>.</p>
+<p>In the Windows host, start a cmd session and move to the folder holding the virtual box disk files. In my case this is <code>C:\Users\&lt;user name&gt;\VirtualBox VMs\ubuntu_1</code>. </p>
+<p>Make a backup copy of the .vdi file. There is some serious stuff coming up.</p>
+<p>Resize the .vdi file with, for example:</p>
+<pre><code>$ VBoxManage modifyhd ubuntu_1.vdi --resize 10240
+</code></pre>
+
+<p>You may get a message that VBoxManage is not a command then you will need to give add the location of the .exe to your path with </p>
+<pre><code>$ set PATH=%PATH%;C:\&quot;program files&quot;\oracle\virtualbox
+</code></pre>
+
+<p>Now you need to increase the partition size. In my case the partition cannot be simply extended on the ubuntu vm because the swapfile is in the way and you cannot move that from the ubuntu machine itself. So a new VM is used for the job.</p>
+<p>Download to the host an .iso file with the GParted application from the <a href="http://gparted.sourceforge.net/download.php">sourceforge site</a></p>
+<p>In VirtualBox create a new virtual machine called &quot;GParted&quot; with type &quot;Linux&quot; and version &quot;Ubuntu&quot;. Choose &quot;Do not add hard disk&quot;. In Settings/Storage  browse to the location of the .iso file and select it. Add the disk that you want to resize under &quot;Controller: SATA Controller&quot;, and navigate to </p>
+<p>Assuming enlarging the partition is blocked by the swap file, delete both the linux-swap partition and the extended partition (probably /dev/sda2) and hit &quot;Apply&quot;.</p>
+<p>Select the /dev/sda1 partition and &quot;Resize/Move&quot; set to the required size and hit &quot;Apply&quot;. Leave 1024Mb free space for the swap file.</p>
+<p>Now re-create the swap partition. Select unallocated space, hit &quot;Add&quot; menu option, choose &quot;Create as: Extended partition&quot;. Hit &quot;Add&quot; again, choose &quot;Create as: Logical Partition&quot; and underneath &quot;File System: linux-swap&quot;.</p>
+<p>Click &quot;Apply&quot;</p>
+<p>Shutdown the GParted machine, and start your ubuntu machine.</p>
+<p>Once you know everything works, delete the backup.</p>
+<h3>Networking from virtual machine</h3>
+<p>Network on vm not working, make following changes
+After trying this and that, I fixed the problem as follows.</p>
+<pre><code>$ sudo gedit /etc/network/interfaces
+</code></pre>
+
+<p>I commented out auto lo and added auto eth0. After that I did</p>
+<pre><code>$ sudo service network-manager restart
+</code></pre>
+
+<h2>Troubleshooting Aptana</h2>
+<h3>Aptana menu options</h3>
+<p>Symptom: Aptana menus don't all work. For example, &quot;File&quot; does not list any options. </p>
+<p>Cause: Something to do with the Global Menu feature of Ubuntu which attempts to put the application menu onto the Ubuntu screen header rather than he application window header. I think they are simply not supported by Aptana, so the whole feature is to be disabled for this app.</p>
+<p>Fix: Change the .desktop file used to launch the app so that the classic app menu mechanism is used. 
+Put the following line in the desktop file <code>/usr/share/applications/AptanaStudio3.desktop</code>. </p>
+<pre><code>Exec=env UBUNTU_MENUPROXY= /opt/aptana/AptanaStudio3
+</code></pre>
+
+<p>And start Atpana from the task bar.</p>
+<h3>To remove java installation:</h3>
+<pre><code>$ sudo apt-get purge openjdk-\* 
+</code></pre>
+
+<p>Download <a href="www.aptana.com/products/studio3/download">Standalone Aptana Studio 3 for Linux</a></p>
+<h3>Alternative mode of installation</h3>
+<p>Then to start the app:
+	$ /opt/aptana/AptanaStudio3</p>
+<p>Cannot get this command to work, although /tmp/Aptana<em>Studio</em>3/AptanaStudio3 does elicit a message.
+But get an error saying jdk not installed</p>
+<p>Workspace defula location: /root/Documents/Aptana Studio 3 Workspace</p>
+<p>But now get a probem saing locking not possible in the directory &quot;/tmp/&quot;
+Probably related to the the ln setting not working.</p>
+<p>So try alternative method from 
+http://www.samclarke.com/2012/04/how-to-install-aptana-studio-3-on-ubuntu-12-04-lts-precise-pangolin/
+Sam recommends using jdk7, and a patch libjepeg.
+But ignoring that for now…
+	$ Sudo unzip [zip download] -d /opt</p>
+<p>And use this to alld menu shortcut
+	$wget http://www.samclarke.com/wp-content/uploads/2012/04/AptanaStudio3.desktop
+	$ sudo mv AptanaStudio3.desktop /usr/share/applications/AptanaStudio3.desktop</p>
+<p>Set up a short cut to the Aptana workspace. From home (~) directory, create symbolic link. The you can use the symbolic name from anywhere.</p>
+<pre><code>$ ln -s &quot;~/Documents/Aptana Studio 3 Workspace&quot; workspace&quot;
+$ cd ~/workspace
+</code></pre>
+
+<h4>remove and re-install Aptana</h4>
+<p>To remove Aptana for a re-install use:</p>
+<pre><code>$ sudo apt-get --purge remove aptana
+</code></pre>
+
+<h2>Troubleshooting Heroku</h2>
+<p>Getting message: 
+Heroku internal client error
+Error: getaddrinfo: Name or service not known (SocketError) (Excon::Error::SocketError)</p>
+<pre><code>“Name or service not known” generally means that the host that you're trying to connect to is not resolving to an IP address (i.e. the DNS lookup is failing).
+You can try a few troubleshooting steps:
+        1. Make sure you have a connection to the internet. Try using ping -c10 8.8.8.8 (since you're pinging an IP address rather than a host name it should work without DNS). You get some statistics at the end of the output, if it says something along the lines of 0% packet loss then you have an internet connection.
+        2. See if DNS is working. Try using dig heroku.com. You should get some output which includes an ANSWER SECTION listing several IP addresses. If you get a timeout instead, then the problem is your DNS server.
+        3. Try another DNS server using dig @8.8.8.8 heroku.com. If that works you should change your DNS servers (at least temporarily) to Google's 8.8.8.8 and 8.8.4.4.
+See also:
+        • The dig manual page
+        • The ping manual page
+        • Google's instructions on changing your DNS servers
+</code></pre>
+
+<p>From <a href="http://stackoverflow.com/questions/12902715/heroku-login-error">http://stackoverflow.com/questions/12902715/heroku-login-error</a> </p>
+<p>From reports on the web, it looks as though changing the vm and host os to use google DNS fixes the issue.</p>
+<p>Settings/network/wired/properties
+Original setting</p>
+<p>New settings</p>
+<p>This fixed the problem.</p>
+<h3>20131124</h3>
+<p>Still having trouble: when loaded onto heroku, I and getting application failure. Even after including the /log directory.</p>
+<p>So try make a new clone of the repo from github and see if that runs clean.
+Create clone</p>
+<pre><code>$ git clone  git@github.com:mikej100/&lt;reponame&gt;.git   &lt;target directory&gt;
+$ Bundle install
+</code></pre>
+
+<p>In the end I just added everything to the repo, and then the server started in the l local clone. Loaded that up into heroku and voila.</p>
+<h1>Responsive implementation</h1>
+<h3>20131122</h3>
+<p>Font sizing
+Set body 100%
+And then h levels at em rations - see spreadsheet on iphone.</p>
+<p>For a mobile first set of settings
+@media screen and (min-width: xxx) {…}
+Using breakpoints 600, 800 1200px</p>
