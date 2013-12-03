@@ -5,6 +5,14 @@
   <%= stylesheet_link_tag    "application", media: "all", "data-turbolinks-track" => true %>
   <%= javascript_include_tag "application", "data-turbolinks-track" => true %>
   <%= csrf_meta_tags %>
+
+<!--Responsive design: set viewport to device width 
+*   so that iphone and other mobile devices which display web pages at 980px
+*   and then shrink to fit 320x480 display at actual width
+*   See "Responsive Web Design" loc 211.
+* 	 -->
+  <meta name="viewport" content="initial-scale=1.0, width=device-width>" />
+  
 </head>
 <body>
 
